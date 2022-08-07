@@ -1,5 +1,4 @@
-import { Component } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
 import fetchImages from 'services/pixabay-api';
 import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
@@ -9,90 +8,79 @@ import Loader from './Loader';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-export class App extends Component {
-  static propTypes = {
-    state: PropTypes.arrayOf(
-      PropTypes.exact({
-        searchKey: PropTypes.string,
-        gallery: PropTypes.array,
-        page: PropTypes.number.isRequired,
-        largeImage: PropTypes.string,
-        largeImageAlt: PropTypes.string,
-        status: PropTypes.string.isRequired,
-      })
-    ),
-  };
+export const App = () => {
+  // state = {
+  //   searchKey: '',
+  //   gallery: [],
+  //   page: 1,
+  //   largeImage: '',
+  //   largeImageAlt: '',
+  //   showModal: false,
+  //   loading: false,
+  // };
 
-  state = {
-    searchKey: '',
-    gallery: [],
-    page: 1,
-    largeImage: '',
-    largeImageAlt: '',
-    showModal: false,
-    loading: false,
-  };
+  const [searchKey, setSearchKey] = useState('');
+  const [gallery, setGallery] = useState([]);
+  const [page, setPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [largeImage, setLargeImage] = useState('');
+  const [showButton, setShowButton] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { searchKey, page } = this.state;
-
-    const prevSearchInput = prevState.searchKey;
-    const nextSearchInput = searchKey;
-    const prevPage = prevState.page;
-    const nextPage = page;
-
-    if (nextSearchInput !== prevSearchInput || prevPage !== nextPage) {
-      this.setState({ loading: true });
-
-      fetchImages(nextSearchInput, nextPage)
-        .then(result => {
-          if (result.length === 0) {
-            toast.error('Please, enter a valid request!', {
-              position: toast.POSITION.TOP_RIGHT,
-            });
-          }
-          this.setState(prevState => ({
-            gallery: [...prevState.gallery, ...result],
-          }));
-        })
-        .catch(error => console.log(error))
-        .finally(() => this.setState({ loading: false }));
+  useEffect(() => {
+    if (!searchKey) {
+      return;
     }
-  }
+    setLoading(true);
 
-  onFormSubmitHandler = ({ searchInput }) => {
-    this.setState({ searchKey: searchInput, gallery: [] });
+    fetchImages(searchKey, page)
+      .then(result => {
+        if (result.length === 0) {
+          toast.error('Please, enter a valid request!', {
+            position: toast.POSITION.TOP_RIGHT,
+          });
+        }
+        if (result.length >= 12) {
+          setShowButton(true);
+        }
+        if (result.length < 12) {
+          setShowButton(false);
+        }
+        setGallery(prev => [...prev, ...result]);
+        setLoading(false);
+      })
+      .catch(error => console.log(error));
+  }, [searchKey, page]);
+
+  const onFormSubmitHandler = ({ searchInput }) => {
+    setSearchKey(searchInput);
+    setGallery([]);
   };
 
-  onLoadButtonClick = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const onLoadButtonClick = () => {
+    setPage(page => page + 1);
   };
 
-  openModal = largeImageURL => {
-    this.setState({ showModal: true });
-    this.setState({ largeImage: largeImageURL });
+  const openModal = largeImageURL => {
+    setShowModal(true);
+    setLargeImage(largeImageURL);
   };
 
-  closeModal = evt => {
-    this.setState(({ showModal }) => ({ showModal: !showModal }));
+  const closeModal = evt => {
+    setShowModal(false);
   };
 
-  render() {
-    const { gallery, showModal, largeImage, loading } = this.state;
+  return (
+    <div>
+      <Searchbar onSubmit={onFormSubmitHandler} />
+      <ImageGallery images={gallery} onModalClick={openModal} />
 
-    return (
-      <div>
-        <Searchbar onSubmit={this.onFormSubmitHandler} />
-        <ImageGallery images={gallery} onModalClick={this.openModal} />
-        {gallery.length !== 0 && gallery.length >= 12 && (
-          <Button onLoadMore={this.onLoadButtonClick} />
-        )}
-        {loading && <Loader />}
-        {showModal && (
-          <Modal onClose={this.closeModal} largeImage={largeImage} />
-        )}
-        <ToastContainer />
-      </div>
-    );
-  }
-}
+      {showButton && <Button onLoadMore={onLoadButtonClick} />}
+      {loading && <Loader />}
+      {showModal && <Modal onClose={closeModal} largeImage={largeImage} />}
+      <ToastContainer />
+    </div>
+  );
+};
+
+export default App;
