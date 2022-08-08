@@ -26,6 +26,7 @@ export const App = () => {
   const [loading, setLoading] = useState(false);
   const [largeImage, setLargeImage] = useState('');
   const [showButton, setShowButton] = useState(false);
+  const imagesPerRequest = 12;
 
   useEffect(() => {
     if (!searchKey) {
@@ -40,10 +41,10 @@ export const App = () => {
             position: toast.POSITION.TOP_RIGHT,
           });
         }
-        if (result.length >= 12) {
+        if (result.length >= imagesPerRequest) {
           setShowButton(true);
         }
-        if (result.length < 12) {
+        if (result.length < imagesPerRequest) {
           setShowButton(false);
         }
         setGallery(prev => [...prev, ...result]);
